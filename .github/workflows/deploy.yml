@@ -28,7 +28,7 @@ jobs:
           | docker login --username AWS --password-stdin 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app
       - name: Build Docker Image
         run: |
-          docker build -t cicd-app .
+          docker build -t cicd-app -f ./app/Dockerfile ./app
       
       - name: Tag Docker Image
         run: |
