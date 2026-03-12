@@ -24,8 +24,7 @@ usermod -aG docker ec2-user
 #docker run -d -p 80:5000 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest
 
 #install Nginx
-sudo amazon-linux-extras enable nginx1
-sudo amazon-linux-extras install nginx1 -y
+sudo dnf install nginx -y
 sudo systemctl enable nginx
 sudo systemctl start nginx
 
