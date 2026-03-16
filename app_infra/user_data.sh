@@ -10,6 +10,7 @@ dnf install -y docker
 # Start and enable Docker
 systemctl start docker
 systemctl enable docker
+dnf install -y docker-compose-plugin
 
 # Allow ec2-user to run docker without sudo
 usermod -aG docker ec2-user
@@ -59,7 +60,8 @@ git clone https://github.com/SuhaniSharmaJoshi/CICD_flask_project.git monitoring
 
 # Start monitoring containers
 cd /home/ec2-user/monitoring
-docker-compose up -d
+
+docker compose up -d
 
 # Optional: Enable monitoring containers on EC2 reboot
 cat <<EOT >> /etc/systemd/system/monitoring.service
@@ -71,8 +73,8 @@ Requires=docker.service
 [Service]
 Type=oneshot
 WorkingDirectory=/home/ec2-user/monitoring
-ExecStart=/usr/local/bin/docker-compose up -d
-ExecStop=/usr/local/bin/docker-compose down
+ExecStart=/usr/local/bin/docker compose up -d
+ExecStop=/usr/local/bin/docker compose down
 RemainAfterExit=yes
 
 [Install]
@@ -82,3 +84,4 @@ EOT
 systemctl enable monitoring.service
 systemctl start monitoring.service
 
+docker ps
