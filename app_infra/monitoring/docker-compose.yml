@@ -5,7 +5,10 @@ services:
     image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
-    network_mode: "host"  # access host metrics
+    network_mode: "host"
+    ports:
+      - "9100:9100"
+      # access host metrics
     # No need to expose port externally
 
   prometheus:

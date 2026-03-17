@@ -9,11 +9,12 @@ dnf install -y docker
 
 # Start and enable Docker
 systemctl start docker
+sleep 10
 systemctl enable docker
 
 # Allow ec2-user to run docker without sudo
 usermod -aG docker ec2-user
-dnf install -y docker-compose-plugin
+sudo dnf install -y docker-compose-plugin
 
 #login to ECR
 #aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 455025093404.dkr.ecr.us-east-1.amazonaws.com
@@ -56,10 +57,10 @@ mkdir -p /home/ec2-user/monitoring/grafana/dashboards
 # Copy prometheus.yml and dashboards (from GitHub repo or S3)
 # Example using GitHub:
 cd /home/ec2-user
-git clone https://github.com/SuhaniSharmaJoshi/CICD_flask_project.git monitoring
+git clone https://github.com/SuhaniSharmaJoshi/CICD_flask_project.git temp_repo
 
-mv CICD_flask_project/monitoring /home/ec2-user/
-
+mv temp_repo/monitoring /home/ec2-user/monitoring
+rm -rf temp_repo
 # Give ownership to ec2-user
 chown -R ec2-user:ec2-user /home/ec2-user/monitoring
 
@@ -80,8 +81,8 @@ Requires=docker.service
 [Service]
 Type=oneshot
 WorkingDirectory=/home/ec2-user/monitoring
-ExecStart=/usr/local/bin/docker compose up -d
-ExecStop=/usr/local/bin/docker compose down
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
 RemainAfterExit=yes
 
 [Install]
