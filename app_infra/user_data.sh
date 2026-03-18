@@ -2,7 +2,7 @@
 set -eux
 
 # Redirect all output to log file and syslog for easy debugging
-exec > >(tee /var/log/user-data.log | logger -t user-data) 2>&1
+exec > /var/log/user-data.log 2>&1
 
 # ----------------------------------------
 # System update & core dependencies
@@ -22,7 +22,11 @@ systemctl enable docker
 timeout 30 bash -c 'until systemctl is-active --quiet docker; do sleep 1; done'
 
 usermod -aG docker ec2-user
-dnf install -y docker-compose-plugin
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+docker compose version
 
 # ----------------------------------------
 # Nginx reverse proxy config
