@@ -1,93 +1,94 @@
 #!/bin/bash
 set -eux
 
-# Update system
+# Redirect all output to log file and syslog for easy debugging
+exec > >(tee /var/log/user-data.log | logger -t user-data) 2>&1
+
+# ----------------------------------------
+# System update & core dependencies
+# ----------------------------------------
 dnf update -y
+dnf install -y git docker nginx
 
-#install git
-dnf install -y git
 git --version
-sleep 5
-# Install Docker
-dnf install -y docker
 
-# Start and enable Docker
+# ----------------------------------------
+# Docker setup
+# ----------------------------------------
 systemctl start docker
-sleep 10
 systemctl enable docker
 
-# Allow ec2-user to run docker without sudo
+# Wait for Docker to be fully ready instead of arbitrary sleep
+timeout 30 bash -c 'until systemctl is-active --quiet docker; do sleep 1; done'
+
 usermod -aG docker ec2-user
-sudo dnf install -y docker-compose-plugin
+dnf install -y docker-compose-plugin
 
-#login to ECR
-#aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 455025093404.dkr.ecr.us-east-1.amazonaws.com
+# ----------------------------------------
+# Nginx reverse proxy config
+# ----------------------------------------
 
-#pull docker image
-#docker pull 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest
+# Remove default server block to avoid conflict with our config on port 80
+rm -f /etc/nginx/conf.d/default.conf
 
-#run container
-#docker run -d -p 80:5000 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest
-
-#install Nginx
-sudo dnf install nginx -y
-sudo systemctl enable nginx
-sudo systemctl start nginx
-
-#Nginx Reverse Proxy Default COnfig
-sudo bash -c 'cat > /etc/nginx/conf.d/cicd-app.conf <<EON
+cat > /etc/nginx/conf.d/cicd-app.conf <<'EON'
 server {
     listen 80;
     server_name _;
 
     location / {
-        proxy_pass http://127.0.0.1:5000;  # Docker container port
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        }
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
 }
-EON'
+EON
 
-#Test Nginx config and restart
+nginx -t
+systemctl enable nginx
+systemctl start nginx
 
-sudo nginx -t
-sudo systemctl restart nginx
+# ----------------------------------------
+# Monitoring stack (Prometheus + Grafana)
+# ----------------------------------------
 
-#monitoring stack
-mkdir -p /home/ec2-user/monitoring/prometheus
-mkdir -p /home/ec2-user/monitoring/grafana/dashboards
+MONITORING_DIR=/home/ec2-user/monitoring
 
-# Copy prometheus.yml and dashboards (from GitHub repo or S3)
-# Example using GitHub:
-cd /home/ec2-user
-git clone https://github.com/SuhaniSharmaJoshi/CICD_flask_project.git temp_repo
+# Clone repo pinned to a specific tag/commit for stability
+# Update REPO_TAG to the appropriate release before deploying
+REPO_URL=https://github.com/SuhaniSharmaJoshi/CICD_flask_project.git
+REPO_TAG=main   # TODO: replace with a pinned tag e.g. v1.2.0
 
-mv temp_repo/app_infra/monitoring /home/ec2-user/monitoring
-rm -rf temp_repo
-# Give ownership to ec2-user
-chown -R ec2-user:ec2-user /home/ec2-user/monitoring
+CLONE_DIR=$(mktemp -d)
+git clone --depth 1 --branch "$REPO_TAG" "$REPO_URL" "$CLONE_DIR"
 
-# -----------------------------
-# Start Monitoring Stack
-# -----------------------------
-cd /home/ec2-user/monitoring
+# Move monitoring config into place
+rm -rf "$MONITORING_DIR"
+mv "$CLONE_DIR/app_infra/monitoring" "$MONITORING_DIR"
+rm -rf "$CLONE_DIR"
 
+chown -R ec2-user:ec2-user "$MONITORING_DIR"
+
+# Start monitoring stack
+cd "$MONITORING_DIR"
 docker compose up -d
 
-# Optional: Enable monitoring containers on EC2 reboot
-cat <<EOT >> /etc/systemd/system/monitoring.service
+# ----------------------------------------
+# Systemd service to restart monitoring on reboot
+# ----------------------------------------
+cat > /etc/systemd/system/monitoring.service <<'EOT'
 [Unit]
-Description=Monitoring Stack
+Description=Monitoring Stack (Prometheus + Grafana)
 After=docker.service
 Requires=docker.service
 
 [Service]
 Type=oneshot
+RemainAfterExit=yes
 WorkingDirectory=/home/ec2-user/monitoring
 ExecStart=/usr/bin/docker compose up -d
 ExecStop=/usr/bin/docker compose down
-RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
@@ -95,6 +96,8 @@ EOT
 
 systemctl daemon-reload
 systemctl enable monitoring.service
-systemctl start monitoring.service
 
+# ----------------------------------------
+# Verify running containers (written to log)
+# ----------------------------------------
 docker ps
