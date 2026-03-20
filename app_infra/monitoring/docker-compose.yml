@@ -1,15 +1,31 @@
 version: '3.9'
 
 services:
+
+  flask-app:
+  image: 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest
+  container_name: flask-app
+  restart: unless-stopped
+  networks:
+    - monitoring
+  # no ports exposed externally
+
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
     network_mode: "host"
-    ports:
-      - "9100:9100"
-      # access host metrics
-    # No need to expose port externally
+    pid: host                  # ← add this, needed to read host metrics
+    volumes:                   # ← add this block, needed for host metrics
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+    # removed ports: — conflicts with network_mode: host
+
 
   prometheus:
     image: prom/prometheus:latest
@@ -19,6 +35,8 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"   # Prometheus dashboard in browser
+    networks : 
+      - monitoring
 
   grafana:
     image: grafana/grafana:latest
@@ -32,4 +50,10 @@ services:
       - prometheus
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=SuhaniSharma
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-clock-panel
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-clock-
+    networks: 
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge

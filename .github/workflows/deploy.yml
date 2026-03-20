@@ -45,22 +45,19 @@ jobs:
 
       - name: Deploy Docker on EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ec2-user@3.233.250.169 << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ec2-user@52.71.141.149 << 'EOF'
             
             # login to ECR
             aws ecr get-login-password --region us-east-1 \
             | docker login --username AWS --password-stdin 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app
             
-            # Stop old container if it exists
-            docker stop cicd-app || true
-            docker rm -f cicd-app || true
-            docker container prune -f
-
             # Pull latest image from ECR
             docker pull 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest
-     
-            # Run the container
-            docker run -d  -p 5000:5000 --name cicd-app 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest
+           
+            # Deploy flask-app via compose
+            cd /home/ec2-user/monitoring  
+            FLASK_IMAGE=455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest \
+             docker compose up -d --no-deps --force-recreate flask-app 
 
             #Nginx reload
             sudo systemctl reload nginx || true
