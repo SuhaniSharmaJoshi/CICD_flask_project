@@ -1,14 +1,10 @@
-version: '3.9'
-
 services:
-
   flask-app:
-  image: 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest
-  container_name: flask-app
-  restart: unless-stopped
-  networks:
-    - monitoring
-  # no ports exposed externally
+    image: 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest
+    container_name: flask-app
+    restart: unless-stopped
+    networks:
+      - monitoring
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -50,7 +46,7 @@ services:
       - prometheus
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=SuhaniSharma
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-clock-
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-clock-panel
     networks: 
       - monitoring
 
