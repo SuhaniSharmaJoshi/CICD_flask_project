@@ -78,7 +78,7 @@ chown -R ec2-user:ec2-user "$MONITORING_DIR"
 cd "$MONITORING_DIR"
 PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
 sed -i "s/PRIVATE_IP_PLACEHOLDER/$PRIVATE_IP/g" \
-  /home/ec2-user/app_infra/monitoring/prometheus/prometheus.yml
+  /home/ec2-user/monitoring/prometheus/prometheus.yml
 
 docker compose up -d
 
