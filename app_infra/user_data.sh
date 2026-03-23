@@ -73,14 +73,14 @@ mv "$CLONE_DIR/app_infra/monitoring" "$MONITORING_DIR"
 rm -rf "$CLONE_DIR"
 
 chown -R ec2-user:ec2-user "$MONITORING_DIR"
+PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+sed -i "s/PRIVATE_IP_PLACEHOLDER/$PRIVATE_IP/g" \
+  "$MONITORING_DIR/prometheus/prometheus.yml
 
 # Start monitoring stack
 cd "$MONITORING_DIR"
-PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
-sed -i "s/PRIVATE_IP_PLACEHOLDER/$PRIVATE_IP/g" \
-  /home/ec2-user/monitoring/prometheus/prometheus.yml
 
-docker compose up -d
+docker compose up -d prometheus grafana node-exporter
 
 # ----------------------------------------
 # Systemd service to restart monitoring on reboot
