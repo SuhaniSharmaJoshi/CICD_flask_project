@@ -73,7 +73,12 @@ mv "$CLONE_DIR/app_infra/monitoring" "$MONITORING_DIR"
 rm -rf "$CLONE_DIR"
 
 chown -R ec2-user:ec2-user "$MONITORING_DIR"
-PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+
+#IMDSv2
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" || true)
+PRIVATE_IP=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null) 
 sed -i "s/PRIVATE_IP_PLACEHOLDER/$PRIVATE_IP/g" \
   "$MONITORING_DIR/prometheus/prometheus.yml"
 

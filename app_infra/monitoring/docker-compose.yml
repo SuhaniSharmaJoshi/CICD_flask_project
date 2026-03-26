@@ -3,6 +3,8 @@ services:
     image: 455025093404.dkr.ecr.us-east-1.amazonaws.com/cicd-python-app:latest
     container_name: flask-app
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
     networks:
       - monitoring
 
