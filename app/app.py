@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template_string
 import os
 from prometheus_flask_exporter import PrometheusMetrics
 
@@ -13,14 +13,15 @@ def home():
     forwarded_for = request.headers.get('X-Forwarded-For','Not set')
     host = request.headers.get('Host', 'Not set')
 
-    return f"""
-    <h1>Welcome to CICD App!</h1>
-    <p>This request is being forwarded through <b>Nginx Reverse Proxy</b>.</p>
-    <p><b>Host:</b> {host}</p>
-    <p><b>Client IP:</b> {client_ip}</p>
-    <p><b>X-Forwarded-For:</b> {forwarded_for}</p>
-    <p>Docker container port: 5000</p>
-    """
+    with open('index.html') as f:
+        template = f.read()
+    
+    return render_template_string(
+        template,
+        host=host,
+        client_ip=client_ip,
+        forwarded_for=forwarded_for
+    ) 
 
 @app.route("/health")
 def health():
